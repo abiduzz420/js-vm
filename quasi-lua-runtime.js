@@ -62,4 +62,4 @@ Klass.prototype = {
   },
   clone: function () { },
   append: function (key) { },
-  
+}
