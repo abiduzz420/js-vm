@@ -33,26 +33,66 @@ Table.prototype = {
     /* (legacy) this.map.set(key, value); */
     if(this.klass.kind === "slow") {
       this.properties.set(key, value);
+      return;
     }
     if(typeof key === "number" && (key | 0 === key)) {
       this.elements[key] = value;
+      return;
     } else if(typeof key === "string") {
       var index = this.findPropertyForWrite(key);
       if(index >= 0) {
         this.properties[index] = value;
+        return;
       }
-      this.convertToSlow();
-      this.store(key, value);
     }
+    
+    this.convertToSlow();
+    this.store(key, value);
   },
-  convertToSlow: function() {},
-  findPropertyForWrite: function (key) { },
+
+  convertToSlow: function() {
+    var map = new Map;
+    for(var i = 0; i < this.klass.keys.length ; i++) {
+      var key = this.klass.keys[i];
+      var val = this.klass.properties[i];
+      map.set(key,val);
+    }
+
+    Object.keys(this.elements).forEach(function (key) {
+      var val = this.elements[key];
+      map.set(key | 0, val);
+    }, this);
+
+    this.klass = new Klass("slow");
+    this.properties = map;
+    this.elements = null;
+
+  },
+
   findPropertyForRead: function (key) {
     if(!this.klass.hasProperty(key)) return -1;
     var desc = this.klass.getDescriptor(key);
     if(!(desc instanceof Property)) return -1;
     return desc.index;
   },
+
+  findPropertyForWrite: function (key) {
+    if(!this.klass.hasProperty(key)) {
+      if(this.klass.keys.length > 20) return -1;
+
+      this.klass = this.klass.addProperty(key);
+      return this.klass.getIndex(key);
+    }
+
+    var desc = this.klass.getDescriptor(key);
+    if(desc instanceof Transition) {
+      this.klass = desc.klass;
+      return this.klass.getIndex(key);
+    }
+
+    return desc.index;
+
+   },
 
 };
 
@@ -101,12 +141,15 @@ Klass.prototype = {
     this.descriptors.set(key, new Transition(klass)); // added transition after clone
     return klass;
   },
+
   hasProperty: function (key) {
     return this.descriptors.has(key);
   },
+
   getDescriptor: function (key) {
     return this.descriptors.get(key);
   },
+
   getIndex: function (key) {
     return this.getDescriptor(key).index;
   },
