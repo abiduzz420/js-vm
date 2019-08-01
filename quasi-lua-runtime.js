@@ -14,10 +14,12 @@ function Table() {
 Table.prototype = {
   load: function (key) { 
     /* (legacy) return this.map.get(key); */ 
+    
+    // get the value from map in slow mode
     if(this.klass.kind === "slow") {
       return this.properties.get(key); 
     }
-    
+    // else fast mode
     if(typeof key === "number" && (key | 0 === key)) {
       return this.elements[key];
 
@@ -31,10 +33,13 @@ Table.prototype = {
 
   store: function (key, value) { 
     /* (legacy) this.map.set(key, value); */
+    
+    // in slow mode, fetch from the map
     if(this.klass.kind === "slow") {
       this.properties.set(key, value);
       return;
     }
+    // else fast mode (it has support for named and indexed properties only)
     if(typeof key === "number" && (key | 0 === key)) {
       this.elements[key] = value;
       return;
@@ -46,6 +51,7 @@ Table.prototype = {
       }
     }
     
+    // fast mode -> slow mode for other kind of properties (not named nor indexed) and recall store method
     this.convertToSlow();
     this.store(key, value);
   },
@@ -63,10 +69,9 @@ Table.prototype = {
       map.set(key | 0, val);
     }, this);
 
-    this.klass = new Klass("slow");
     this.properties = map;
     this.elements = null;
-
+    this.klass = new Klass("slow");
   },
 
   findPropertyForRead: function (key) {
@@ -77,19 +82,25 @@ Table.prototype = {
   },
 
   findPropertyForWrite: function (key) {
+    // if the property doesn't exist, then add it
     if(!this.klass.hasProperty(key)) {
+      // too many properties already added
       if(this.klass.keys.length > 20) return -1;
-
+      
       this.klass = this.klass.addProperty(key);
       return this.klass.getIndex(key);
     }
-
+    
+    // else (property already exists)
     var desc = this.klass.getDescriptor(key);
+    
+    // property exists in the transition hidden class and not in current hidden class
     if(desc instanceof Transition) {
       this.klass = desc.klass;
       return this.klass.getIndex(key);
     }
 
+    // else desc is an instance of real property
     return desc.index;
 
    },
@@ -118,18 +129,21 @@ STORE(os, 'clock', function () {
   return Date.now() / 1000;
 });
 
-function Transition(klass) {
-  this.klass = klass;
-}
-
+// descriptor type 1
 function Property(index) {
   this.index = index;
 }
 
+// descriptor type 2
+function Transition(klass) {
+  this.klass = klass;
+}
+
+// hidden class
 function Klass(kind) {
-  this.kind = kind;
-  this.descriptors = new Map;
-  this.keys = [];
+  this.kind = kind; // fast mode (have offsets) or slow mode (behaves like map)
+  this.descriptors = new Map; // contains properties or transitions
+  this.keys = []; // 
 }
 
 Klass.prototype = {
