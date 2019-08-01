@@ -1,11 +1,59 @@
+var ROOT_KLASS = new Klass("fast");
+
 function Table() {
-  // Map from ES Harmony is a simple dictionary-style collection.
-  this.map = new Map;
+  /*
+  (legacy) Map from ES Harmony is a simple dictionary-style collection.
+  this.map = new Map;  
+  */
+  
+  this.klass = ROOT_KLASS;
+  this.properties = []; // named-props
+  this.elements = []; // index props
 }
 
 Table.prototype = {
-  load: function (key) { return this.map.get(key); },
-  store: function (key, value) { this.map.set(key, value); }
+  load: function (key) { 
+    /* (legacy) return this.map.get(key); */ 
+    if(this.klass.kind === "slow") {
+      return this.properties.get(key); 
+    }
+    
+    if(typeof key === "number" && (key | 0 === key)) {
+      return this.elements[key];
+
+    } else if(typeof key === "string") {
+      var index = this.findPropertyForRead(key);
+      return (index >=0) ? this.properties[index] : void 0;
+    }
+
+    return void 0;
+  },
+
+  store: function (key, value) { 
+    /* (legacy) this.map.set(key, value); */
+    if(this.klass.kind === "slow") {
+      this.properties.set(key, value);
+    }
+    if(typeof key === "number" && (key | 0 === key)) {
+      this.elements[key] = value;
+    } else if(typeof key === "string") {
+      var index = this.findPropertyForWrite(key);
+      if(index >= 0) {
+        this.properties[index] = value;
+      }
+      this.convertToSlow();
+      this.store(key, value);
+    }
+  },
+  convertToSlow: function() {},
+  findPropertyForWrite: function (key) { },
+  findPropertyForRead: function (key) {
+    if(!this.klass.hasProperty(key)) return -1;
+    var desc = this.klass.getDescriptor(key);
+    if(!(desc instanceof Property)) return -1;
+    return desc.index;
+  },
+
 };
 
 function CHECK_TABLE(t) {
