@@ -43,3 +43,23 @@ function Klass(kind) {
   this.descriptors = new Map;
   this.keys = [];
 }
+
+Klass.prototype = {
+  addProperty: function (key) {
+    var klass = this.clone();
+    klass.append(key);
+    this.descriptors.set(key, new Transition(klass));
+    return klass;
+  },
+  hasProperty: function (key) {
+    return this.descriptors.has(key);
+  },
+  getDescriptor: function (key) {
+    return this.descriptors.get(key);
+  },
+  getIndex: function (key) {
+    return this.getDescriptor(key).index;
+  },
+  clone: function () { },
+  append: function (key) { },
+  
