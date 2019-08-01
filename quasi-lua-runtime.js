@@ -29,3 +29,17 @@ var os = new Table();
 STORE(os, 'clock', function () {
   return Date.now() / 1000;
 });
+
+function Transition(klass) {
+  this.klass = klass;
+}
+
+function Property(index) {
+  this.index = index;
+}
+
+function Klass(kind) {
+  this.kind = kind;
+  this.descriptors = new Map;
+  this.keys = [];
+}
