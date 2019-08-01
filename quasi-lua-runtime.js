@@ -45,10 +45,12 @@ function Klass(kind) {
 }
 
 Klass.prototype = {
+  // adding a new property by creating a new hidden class
+  // with the old HC pointing a transition to the new one
   addProperty: function (key) {
     var klass = this.clone();
     klass.append(key);
-    this.descriptors.set(key, new Transition(klass));
+    this.descriptors.set(key, new Transition(klass)); // added transition after clone
     return klass;
   },
   hasProperty: function (key) {
@@ -60,6 +62,22 @@ Klass.prototype = {
   getIndex: function (key) {
     return this.getDescriptor(key).index;
   },
-  clone: function () { },
-  append: function (key) { },
-}
+  
+  // the new hidden class has all the real properties at same offsets
+  // except the transition
+  clone: function () {
+    var klass = new Klass(this.kind);
+    klass.keys = this.keys.slice(0);
+    for(var i = 0; i < this.keys.length; i++) {
+      var key = this.keys[i];
+      klass.descriptors.set(key, this.getDescriptor(key));
+    }
+    return klass;
+  },
+  
+  // adding real properties
+  append: function (key) {
+    this.keys.push(key);
+    this.descriptors.set(key, new Property(this.keys.length - 1));
+  },
+};
