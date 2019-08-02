@@ -1,3 +1,5 @@
+// Initially all ICs are in uninitialized state.
+// They are not hitting the cache and always missing into runtime system.
 var STORE$0 = NAMED_STORE_MISS;
 var STORE$1 = NAMED_STORE_MISS;
 var KEYED_STORE$2 = KEYED_STORE_MISS;
@@ -16,8 +18,8 @@ var LOAD$14 = NAMED_LOAD_MISS;
 
 function MakePoint(x, y) {
   var point = new Table();
-  STORE(point, 'x', x);
-  STORE(point, 'y', y);
+  STORE$0(point, 'x', x, 0);
+  STORE$1(point, 'y', y, 1);
   return point;
 }
 
@@ -26,24 +28,30 @@ function MakeArrayOfPoints(N) {
   var m = -1;
   for (var i = 0; i <= N; i++) {
     m = m * -1;
-    STORE(array, i, MakePoint(m * i, m * -i));
+    // Now we are also distinguishing between expressions x[p] and x.p.
+    // The fist one is called keyed load/store and the second one is called
+    // named load/store.
+    // The main difference is that named load/stores use a fixed known
+    // constant string key and thus can be specialized for a fixed property
+    // offset.
+    KEYED_STORE$2(array, i, MakePoint(m * i, m * -i), 2); // load into x[p]
   }
-  STORE(array, 'n', N);
+  STORE$3(array, 'n', N, 3);
   return array;
 }
 
 function SumArrayOfPoints(array) {
   var sum = MakePoint(0, 0);
-  for (var i = 0; i <= LOAD(array, 'n'); i++) {
-    STORE(sum, 'x', LOAD(sum, 'x') + LOAD(LOAD(array, i), 'x'));
-    STORE(sum, 'y', LOAD(sum, 'y') + LOAD(LOAD(array, i), 'y'));
+  for (var i = 0; i <= LOAD$4(array, 'n', 4); i++) {
+    STORE$5(sum, 'x', LOAD$6(sum, 'x', 6) + LOAD$7(KEYED_LOAD$8(array, i, 8), 'x', 7), 5);
+    STORE$9(sum, 'y', LOAD$10(sum, 'y', 10) + LOAD$11(KEYED_LOAD$12(array, i, 12), 'y', 11), 9);
   }
   return sum;
 }
 
 function CheckResult(sum) {
-  var x = LOAD(sum, 'x');
-  var y = LOAD(sum, 'y');
+  var x = LOAD$13(sum, 'x', 13);
+  var y = LOAD$14(sum, 'y', 14);
   if (x !== 50000 || y !== -50000) {
     throw new Error("failed: x = " + x + ", y = " + y);
   }
