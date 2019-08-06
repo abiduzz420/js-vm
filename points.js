@@ -66,3 +66,72 @@ for (var i = 0; i <= 5; i++) {
 }
 var end = LOAD(os, 'clock')() * 1000;
 print(end - start);
+
+// MISS stubs and compiler
+
+function PatchIC(optype, ic, stub) {
+  this[optype + "$" + ic] = stub; // this is a global object -> refers to g.variables defined at the top
+}
+
+function NAMED_LOAD_MISS(table, key, ic) {
+  var v = LOAD(table, key);
+  if(table.klass.kind === "fast") {
+    var stub = CompileNamedLoadFastProperty(table.klass, key);
+    PatchIC("LOAD", ic, stub);
+  }
+  return v;
+}
+
+function CompileNamedLoadFastProperty(klass, key) {
+  // key is constant in named load. specialize index
+  var index = klass.getIndex(key);
+
+  function KeyedLoadFastProperty(table, key, ic) {
+    if(table.klass !== klass) {
+      return NAMED_LOAD_MISS(table, key, ic);
+    }
+    return table.properties[index];
+  }
+
+  return KeyedLoadFastProperty;
+}
+
+function NAMED_STORE_MISS(table, key, value, ic) {
+  var klass_before = table.klass;
+  STORE(table, key, value);
+  var klass_after = table.klass;
+  if(klass_before.kind === "fast" && klass_after.kind == "fast") {
+    var stub = CompileNamedStoreFastProperty(klass_before, klass_after, key);
+    PatchIC("STORE", ic, stub);
+  }
+  return v;
+}
+
+function CompileNamedStoreFastProperty(klass_before, klass_after, key) {
+  var index = klass_after.getIndex(key);
+
+  function KeyedStoreFastProperty(table, key, value, ic) {
+    // transition happens
+    if(klass_before !== klass_after) {
+      return function (table, key, value, ic) {
+        if(table.klass !== klass_before) {
+          return NAMED_STORE_MISS(table, key, value, ic);
+        }
+        table.properties[index] = value;
+        table.klass = klass_after;
+      }
+    }
+
+    // else no transition happens (updating an existing property)
+    else {
+      return function (table, key, value, ic) {
+        if(table.klass !== klass_before) {
+          return NAMED_STORE_MISS(table, key, value, ic);
+        }
+        table.properties[index] = value;
+      }
+    }
+  }
+
+  return KeyedStoreFastProperty;
+}
