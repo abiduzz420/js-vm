@@ -8,7 +8,7 @@ var LOAD$4 = NAMED_LOAD_MISS;
 var STORE$5 = NAMED_STORE_MISS;
 var LOAD$6 = NAMED_LOAD_MISS;
 var LOAD$7 = NAMED_LOAD_MISS;
-var KEYED_LOAD$8 = NAMED_LOAD_MISS;
+var KEYED_LOAD$8 = KEYED_LOAD_MISS;
 var STORE$9 = NAMED_STORE_MISS;
 var LOAD$10 = NAMED_LOAD_MISS;
 var LOAD$11 = NAMED_LOAD_MISS;
@@ -104,7 +104,6 @@ function NAMED_STORE_MISS(table, key, value, ic) {
     var stub = CompileNamedStoreFastProperty(klass_before, klass_after, key);
     PatchIC("STORE", ic, stub);
   }
-  return v;
 }
 
 function CompileNamedStoreFastProperty(klass_before, klass_after, key) {
