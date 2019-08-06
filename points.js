@@ -134,3 +134,12 @@ function CompileNamedStoreFastProperty(klass_before, klass_after, key) {
 
   return KeyedStoreFastProperty;
 }
+
+function KEYED_LOAD_MISS(table, key, ic) {
+  var v = LOAD(table, key);
+  return v;
+}
+
+function KEYED_STORE_MISS(table, key, value, ic) {
+  STORE(table, key, value);
+}
