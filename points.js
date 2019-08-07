@@ -137,9 +137,37 @@ function CompileNamedStoreFastProperty(klass_before, klass_after, key) {
 
 function KEYED_LOAD_MISS(table, key, ic) {
   var v = LOAD(table, key);
+  if(table.klass.kind === "fast" && (typeof key === "number" && (key | 0) === key)) {
+    var stub = CompileKeyedLoadFastElement();
+    PatchIC("KEYED_LOAD", ic, stub);
+  }
   return v;
+}
+
+function CompileKeyedLoadFastElement() {
+  function KeyedLoadFastElement(table, key, ic) {
+    if(table.klass.kind !== "fast" || !(typeof key === "number" && (key | 0) === key)) {
+      return KEYED_LOAD_MISS(table,key,ic);
+    }
+    return table.elements[key]
+  }
+  return KeyedLoadFastElement;
 }
 
 function KEYED_STORE_MISS(table, key, value, ic) {
   STORE(table, key, value);
+  if(table.klass.kind === "fast" && (typeof key === "number" && (key | 0) === key)) {
+    var stub = CompileKeyedStoreFastElement();
+    PatchIC("KEYED_STORE", ic, stub);
+  }
+}
+
+function CompileKeyedStoreFastElement() {
+  function KeyedStoreFastElement(table, key, value, ic) {
+    if(table.klass.kind !== "fast" || !(typeof key === "number" && (key | 0) === key)) {
+      return KEYED_STORE_MISS(table, key, value, ic);
+    }
+    table.elements[key] = value;
+  }
+  return KeyedStoreFastElement;
 }
